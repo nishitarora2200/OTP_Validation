@@ -13,7 +13,7 @@ exports.postOtp = async(req,res)=>{
         const email = req.body.email || req.query.email;
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() });
+            return res.status(422).json({ errors: errors.array()[0].msg });
         }
         
         const expiryTime  = 24*60*60*1000;
@@ -30,8 +30,8 @@ exports.postOtp = async(req,res)=>{
         const transporter = nodemailer.createTransport({
             service:'gmail',
             auth:{
-            user:"Enter your Gmail id",
-            pass:"Password of your gmail id"
+            user:"enter your email id",
+            pass:"enter your password"
         }
     });
     
@@ -44,21 +44,19 @@ exports.postOtp = async(req,res)=>{
     
     transporter.sendMail(mailOptions,async(err,info)=>{
         if(err){
-            throw new Error(err);
+            throw new Error(err.message);
         }
         else if(!customer){
             await Customer.create({email,otp,count:1})
-            res.redirect(`/verify?email=${email}`)
+         return res.redirect(`/verify?email=${email}`)
             
         }
         await Customer.update({otp:otp,count:customer.dataValues.count+1},{where:{email:email}});    
-       res.redirect(`/verify?email=${email}`)
+     return res.redirect(`/verify?email=${email}`)
     })
 
     } catch (error) {
-        res.status(400).json({
-            error:error.message
-        })
+        res.end(error.message);
     }
     
 }
@@ -77,7 +75,7 @@ exports.postVerify = async(req,res)=>{
         const email = req.query.email;
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() });
+            return res.status(422).json({ errors: errors.array()[0].msg });
         }
         const customer =  await Customer.findOne({where:{email:email}});
         const time = customer.dataValues.updatedAt;
@@ -87,10 +85,10 @@ exports.postVerify = async(req,res)=>{
             throw new Error("OTP expired");
         }
         if(otp==customer.dataValues.otp){
-            res.send("<h1>OTP successfully verified</h1>")
+            res.end("<h1>OTP successfully verified</h1>")
         }
-        throw new Error("Invalid OTP please TRY again ")
-    } catch (error) {
-        res.send(error.message);
+        throw new Error("Invalid OTP please TRY again");
+        } catch (error) {
+        res.end(error.message);
     }
 }
